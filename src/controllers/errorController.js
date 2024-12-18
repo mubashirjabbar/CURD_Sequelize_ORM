@@ -4,12 +4,12 @@ const sendErrorDev = (error, res) => {
     const statusCode = error.statusCode || 500;
     const status = error.status || 'error';
     const message = error.message;
-    // const stack = error.stack;
+    const stack = error.stack;
 
     res.status(statusCode).json({
         status,
         message,
-        // stack,
+        stack,
     });
 };
 
