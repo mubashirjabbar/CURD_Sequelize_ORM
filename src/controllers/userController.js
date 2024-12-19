@@ -5,6 +5,7 @@ import bcrypt from "bcrypt"
 import User from "../models/userModel.js";
 import AppError from "../utils/appError.js";
 import catchAsync from "../utils/catchAsync.js";
+import logger from '../utils/logger.js';
 
 // Standardized response function
 const handleResponse = (res, status, message, data = null) => {
@@ -58,35 +59,43 @@ export const signUpUser = catchAsync(async (req, res, next) => {
 export const login = catchAsync(async (req, res, next) => {
   const { email, password } = req.body;
 
-  try {
+  logger.info('Received login request', { email });
 
+  try {
     if (!email || !password) {
+      logger.warn('Missing email or password');
       return next(new AppError('Please provide email and password', 400));
     }
 
-    // find the user in the database by email
+    logger.info('Searching for user by email');
     const user = await User.findOne({ where: { email } });
 
     if (!user) {
+      logger.warn('User not found for login attempt', { email });
       return next(new AppError('Incorrect email or password', 401));
     }
 
-    // compare the password from the request with the hashed password in the database
+    logger.info('Comparing password with the hashed password in the database');
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
+      logger.warn('Password mismatch for user', { email });
       return handleResponse(res, 401, "Invalid email or password");
     }
 
-    // there are many ways to not send the password in the response
+    logger.info('User logged in successfully', { userId: user.id });
+
+    // Return user data without password
     const result = user.toJSON();
     delete result.password;
 
-    result.token = generateToken({ id: result.id })
+    result.token = generateToken({ id: result.id });
 
+    logger.info('Returning login response with token', { userId: result.id });
     return handleResponse(res, 201, "User logged in successfully", result);
 
   } catch (error) {
+    logger.error('Error during login process', { error: error.message });
     next(error);
   }
-})
+});
